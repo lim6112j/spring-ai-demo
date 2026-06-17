@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: spring-ai-demo
+  ai:
+    openai:
+      api-key: ${OPENROUTER_API_KEY}
+      base-url: https://openrouter.ai/api/v1
+      chat:
+        options:
+          model: google/gemini-2.5-pro  # or any currently available model ID from OpenRouter
