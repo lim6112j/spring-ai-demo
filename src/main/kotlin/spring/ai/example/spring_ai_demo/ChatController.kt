@@ -8,6 +8,9 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
+import org.springframework.ai.chat.memory.ChatMemory
+import org.springframework.ai.chat.memory.MessageWindowChatMemory
 import java.util.Scanner
 
 
@@ -27,6 +30,11 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
               GlobTool.builder().build(),
               ShellTools.builder().build()
           )
+          .defaultAdvisors(
+              MessageChatMemoryAdvisor
+                  .builder(MessageWindowChatMemory.builder().build())
+                  .build()
+          )
           .build()
     var scanner = Scanner(System.`in`)
     init {
@@ -36,7 +44,11 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
             val input: String = scanner.nextLine()
             if ("exit".equals(input.trim(), ignoreCase = true)) break
             try {
-                val response = chatClient.prompt().user(input).call()
+                val response = chatClient
+                    .prompt()
+                    .advisors { it.param(ChatMemory.CONVERSATION_ID, "cli-session") }
+                    .user(input)
+                    .call()
                 println(response.content())
             } catch (e: Exception) {
                 println("Error: ${e.message}")
@@ -45,7 +57,15 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
     }
 
     @PostMapping("/chat")
-  fun chat(@RequestParam message: String): String {
-    return chatClient.prompt().user(message).call().content() ?: ""
-  }
+    fun chat(
+        @RequestParam message: String,
+        @RequestParam(defaultValue = "default") conversationId: String
+    ): String {
+        return chatClient
+            .prompt()
+            .advisors { it.param(ChatMemory.CONVERSATION_ID, conversationId) }
+            .user(message)
+            .call()
+            .content() ?: ""
+    }
 }
