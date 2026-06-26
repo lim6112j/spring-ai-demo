@@ -4,6 +4,7 @@ import org.springaicommunity.agent.tools.FileSystemTools
 import org.springaicommunity.agent.tools.GrepTool
 import org.springaicommunity.agent.tools.GlobTool
 import org.springaicommunity.agent.tools.ShellTools
+import org.springaicommunity.agent.tools.SkillsTool
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
@@ -27,7 +28,8 @@ class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner 
               FileSystemTools.builder().build(),
               GrepTool.builder().build(),
               GlobTool.builder().build(),
-              ShellTools.builder().build()
+              ShellTools.builder().build(),
+              SkillsTool.builder().addSkillsDirectory(".claude/skills").build()
           )
           .defaultAdvisors(
               MessageChatMemoryAdvisor
