@@ -34,7 +34,7 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
         while (true) {
             print("\n> ")
             val input: String = scanner.nextLine()
-            if ("exit".equals(input.trim(), ignoreCase = true)) break;
+            if ("exit".equals(input.trim(), ignoreCase = true)) break
             try {
                 val response = chatClient.prompt().user(input).call()
                 println(response.content())
