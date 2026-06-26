@@ -5,16 +5,14 @@ import org.springaicommunity.agent.tools.GrepTool
 import org.springaicommunity.agent.tools.GlobTool
 import org.springaicommunity.agent.tools.ShellTools
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.memory.MessageWindowChatMemory
+import org.springframework.stereotype.Component
 import java.util.Scanner
 
 
-@RestController
+@Component
 class ChatController(chatClientBuilder: ChatClient.Builder) {
   private val chatClient: ChatClient =
       chatClientBuilder
@@ -54,18 +52,5 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
                 println("Error: ${e.message}")
             }
         }
-    }
-
-    @PostMapping("/chat")
-    fun chat(
-        @RequestParam message: String,
-        @RequestParam(defaultValue = "default") conversationId: String
-    ): String {
-        return chatClient
-            .prompt()
-            .advisors { it.param(ChatMemory.CONVERSATION_ID, conversationId) }
-            .user(message)
-            .call()
-            .content() ?: ""
     }
 }
