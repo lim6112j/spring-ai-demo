@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: spring-ai-demo
@@ -8,3 +11,8 @@ spring:
       chat:
         options:
           model: google/gemini-2.5-pro  # or any currently available model ID from OpenRouter
+logging:
+  level:
+    org.springframework.ai.chat.client.advisor: DEBUG
+    org.springframework.ai.model.tool: DEBUG
+    org.springaicommunity.agent.tools: DEBUG

@@ -7,6 +7,7 @@ import org.springaicommunity.agent.tools.ShellTools
 import org.springaicommunity.agent.tools.SkillsTool
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.memory.MessageWindowChatMemory
 import org.springframework.boot.CommandLineRunner
@@ -16,6 +17,10 @@ import java.util.Scanner
 
 @Component
 class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner {
+  private fun compact(text: String?, max: Int = 120): String {
+      val normalized = text?.replace(Regex("\\s+"), " ")?.trim().orEmpty()
+      return if (normalized.length <= max) normalized else normalized.take(max) + "…"
+  }
   private val chatClient: ChatClient =
       chatClientBuilder
           .defaultSystem { """
@@ -32,6 +37,21 @@ class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner 
               SkillsTool.builder().addSkillsDirectory(".claude/skills").build()
           )
           .defaultAdvisors(
+              SimpleLoggerAdvisor
+                  .builder()
+                  .requestToString { req ->
+                      val conversationId = req?.context()?.get(ChatMemory.CONVERSATION_ID) ?: "-"
+                      val userPreview = compact(req?.prompt()?.getUserMessage()?.text)
+                      "AI_REQ conversationId=$conversationId user=\"$userPreview\""
+                  }
+                  .responseToString { res ->
+                      val generation = runCatching { res?.result }.getOrNull()
+                      val assistantMessage = generation?.output
+                      val toolCalls = assistantMessage?.toolCalls?.size ?: 0
+                      val textPreview = compact(assistantMessage?.text)
+                      "AI_RES hasToolCalls=${res?.hasToolCalls() ?: false} toolCalls=$toolCalls text=\"$textPreview\""
+                  }
+                  .build(),
               MessageChatMemoryAdvisor
                   .builder(MessageWindowChatMemory.builder().build())
                   .build()
