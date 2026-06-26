@@ -8,12 +8,13 @@ import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.memory.MessageWindowChatMemory
+import org.springframework.boot.CommandLineRunner
 import org.springframework.stereotype.Component
 import java.util.Scanner
 
 
 @Component
-class ChatController(chatClientBuilder: ChatClient.Builder) {
+class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner {
   private val chatClient: ChatClient =
       chatClientBuilder
           .defaultSystem { """
@@ -34,8 +35,9 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
                   .build()
           )
           .build()
-    var scanner = Scanner(System.`in`)
-    init {
+
+    override fun run(vararg args: String) {
+        val scanner = Scanner(System.`in`)
         println("🤖 Sprout coding Agent at your service. Ask me anything")
         while (true) {
             print("\n> ")
