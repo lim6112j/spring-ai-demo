@@ -4,18 +4,23 @@ import org.springaicommunity.agent.tools.FileSystemTools
 import org.springaicommunity.agent.tools.GrepTool
 import org.springaicommunity.agent.tools.GlobTool
 import org.springaicommunity.agent.tools.ShellTools
+import org.springaicommunity.agent.tools.SkillsTool
 import org.springframework.ai.chat.client.ChatClient
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.memory.MessageWindowChatMemory
+import org.springframework.boot.CommandLineRunner
+import org.springframework.stereotype.Component
 import java.util.Scanner
 
 
-@RestController
-class ChatController(chatClientBuilder: ChatClient.Builder) {
+@Component
+class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner {
+  private fun compact(text: String?, max: Int = 120): String {
+      val normalized = text?.replace(Regex("\\s+"), " ")?.trim().orEmpty()
+      return if (normalized.length <= max) normalized else normalized.take(max) + "…"
+  }
   private val chatClient: ChatClient =
       chatClientBuilder
           .defaultSystem { """
@@ -28,16 +33,33 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
               FileSystemTools.builder().build(),
               GrepTool.builder().build(),
               GlobTool.builder().build(),
-              ShellTools.builder().build()
+              ShellTools.builder().build(),
+              SkillsTool.builder().addSkillsDirectory(".claude/skills").build()
           )
           .defaultAdvisors(
+              SimpleLoggerAdvisor
+                  .builder()
+                  .requestToString { req ->
+                      val conversationId = req?.context()?.get(ChatMemory.CONVERSATION_ID) ?: "-"
+                      val userPreview = compact(req?.prompt()?.getUserMessage()?.text)
+                      "AI_REQ conversationId=$conversationId user=\"$userPreview\""
+                  }
+                  .responseToString { res ->
+                      val generation = runCatching { res?.result }.getOrNull()
+                      val assistantMessage = generation?.output
+                      val toolCalls = assistantMessage?.toolCalls?.size ?: 0
+                      val textPreview = compact(assistantMessage?.text)
+                      "AI_RES hasToolCalls=${res?.hasToolCalls() ?: false} toolCalls=$toolCalls text=\"$textPreview\""
+                  }
+                  .build(),
               MessageChatMemoryAdvisor
                   .builder(MessageWindowChatMemory.builder().build())
                   .build()
           )
           .build()
-    var scanner = Scanner(System.`in`)
-    init {
+
+    override fun run(vararg args: String) {
+        val scanner = Scanner(System.`in`)
         println("🤖 Sprout coding Agent at your service. Ask me anything")
         while (true) {
             print("\n> ")
@@ -54,18 +76,5 @@ class ChatController(chatClientBuilder: ChatClient.Builder) {
                 println("Error: ${e.message}")
             }
         }
-    }
-
-    @PostMapping("/chat")
-    fun chat(
-        @RequestParam message: String,
-        @RequestParam(defaultValue = "default") conversationId: String
-    ): String {
-        return chatClient
-            .prompt()
-            .advisors { it.param(ChatMemory.CONVERSATION_ID, conversationId) }
-            .user(message)
-            .call()
-            .content() ?: ""
     }
 }
