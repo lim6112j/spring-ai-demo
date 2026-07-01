@@ -11,12 +11,16 @@ import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor
 import org.springframework.ai.chat.memory.ChatMemory
 import org.springframework.ai.chat.memory.MessageWindowChatMemory
 import org.springframework.boot.CommandLineRunner
+import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.stereotype.Component
 import java.util.Scanner
 
 
 @Component
-class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner {
+class ChatController(
+    private val context: ConfigurableApplicationContext,
+    chatClientBuilder: ChatClient.Builder
+) : CommandLineRunner {
   private fun compact(text: String?, max: Int = 120): String {
       val normalized = text?.replace(Regex("\\s+"), " ")?.trim().orEmpty()
       return if (normalized.length <= max) normalized else normalized.take(max) + "…"
@@ -64,7 +68,11 @@ class ChatController(chatClientBuilder: ChatClient.Builder) : CommandLineRunner 
         while (true) {
             print("\n> ")
             val input: String = scanner.nextLine()
-            if ("exit".equals(input.trim(), ignoreCase = true)) break
+            if ("exit".equals(input.trim(), ignoreCase = true)) {
+                println("Shutting down...")
+                context.close()
+                break
+            }
             try {
                 val response = chatClient
                     .prompt()
